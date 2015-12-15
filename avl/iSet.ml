@@ -89,7 +89,7 @@ let cmp (lo1, hi1) (lo2, hi2) =
  * bierze: przedział x i drzewo, przy założeniu że x jest rozłączny ze wszystkimi przedziałami drzewa
  * zwraca: drzewo z przypisanym przedziałem x *)
 let rec add_sep x = function
-  | Node (l, k, r, h, s) ->
+  | Node (l, k, r, _, _) ->
       let c = cmp x k in
       let () = assert( c != 0 ) in 
       if c < 0 then
@@ -154,7 +154,7 @@ let rec min_elt = function
  * zwraca: drzewo z usuniętym minimalnym przedziałem *)
 let rec remove_min_elt = function
   | Node (Null, _, r, _, _) -> r
-  | Node (l, k, r, _, _) -> bal (remove_min_elt l) k r
+  | Node (l, k, r, _, _) -> join (remove_min_elt l) k r
   | Null -> invalid_arg "PSet.remove_min_elt"
 
 (* Funkcja max_elt
@@ -174,7 +174,7 @@ let merge t1 t2 =
     | _, Null-> t1
     | _ ->
         let k = min_elt t2 in
-        bal t1 k (remove_min_elt t2)
+        join t1 k (remove_min_elt t2)
 
 (* Funkcja add
  * bierze: przedział i drzewo t
@@ -189,17 +189,17 @@ let add (lo, hi) t =
             let cur = (mxl, mnr) 
             and less, _ = divide less (mxl, mxr)
             and _, greater = divide greater (mnl, mnr)
-            in bal less cur greater
+            in join less cur greater
         else if mxl <= mxr && mxr = lo - 1 then
             let cur = (mxl, hi) 
             and less, _ = divide less (mxl, mxr)
-            in bal less cur greater
+            in join less cur greater
         else if mnl <= mnr && mnl = hi + 1 then
             let cur = (lo, mnr) 
             and _, greater = divide greater (mnl, mnr)
-            in bal less cur greater
+            in join less cur greater
         else
-            bal less cur greater
+            join less cur greater
 
 (* Funkcja remove
  * bierze: przedział (lo, hi) i drzewo t
@@ -279,40 +279,31 @@ let rec below x t =
             else
                 sum l ++ (x) ++ (-lo) ++ (1) 
 
-(* Debugging stuff *)
-let rec printTree t = 
-    match t with
-    | Null -> () 
-    | Node(l, (lo, hi), r, _, _) -> 
-        let () = Printf.printf "("
-        and () = printTree l 
-        and () = Printf.printf " - [%d, %d] - " lo hi
-        and () = printTree r
-        and () = Printf.printf ")" in ()
-
-let fill k = 
-let rec fill2 l k = 
-if k = 0 then l
-else (fill2 ((k * 2) :: l) (k - 1)) in
-fill2 [] k
-
-let tr = List.fold_left (fun t x -> add (x, x) t) empty (fill 300000)
-(*let fillArray k = 
+let fillArray k = 
     let rec fill l k = if k = 0 then l
                 else (fill ((k * 2) :: l) (k - 1)) in
     fill [] k
 
-let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 1000000)
-let () = print_int (height tr) 
+let rec is_avl k = 
+    match k with
+    | Null -> true
+    | Node(l, _, r, _, _) -> abs(height l - height r) <= 2 && is_avl l && is_avl r
+
+(*
+let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 10000)
+let () = assert (is_avl tr)
 let tr = empty
 let tr = add (2, 5) tr
-let a, b = divide tr (3, 5)
-let () = printTree a; printTree b 
-
-let fill k = 
-let rec fill2 l k = 
-if k = 0 then l
-else (fill2 ((k * 2) :: l) (k - 1)) in
-fill2 [] k
-
-let tr = List.fold_left (fun t x -> add (x, x) t) empty (fill 3000000) *)
+let () = assert (below 5 tr = 4)
+let () = assert (below 0 tr = 0)
+let tr = add (4, 10) tr
+let () = assert (below 6 tr = 5)
+let tr = remove (2, 3) tr
+let () = assert (below 6 tr = 3)
+let () = assert (is_avl tr)
+let tr = add (-max_int, max_int) tr
+let () = assert (below 0 tr = max_int)
+let tr = remove (-max_int + 1, max_int - 1) tr
+let h::t = elements tr
+let () = assert ( h = (-max_int, -max_int) ) 
+let () = assert ( is_avl tr ) *)
