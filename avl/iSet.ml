@@ -1,6 +1,6 @@
 (* Zadanie Modyfikacja drzew AVL *)
 (* Autor: Uladzislau Sobal 374078 *)
-(* Code-review: Tomasz Gąsior *)
+(* Code-review: Tomasz Gąsior 370797*)
 
 (* Typ wariantowy drzewo 
  * składa się z:
@@ -32,12 +32,9 @@ let sum = function
  * zwraca: a + b gdy a + b < max_int, inaczej max_int  *)
 let (++) a b = 
     let sum = a + b in
-    if b > 0 && (sum < a || sum < b) then
+    if sum < b then
         max_int
-    else if a = max_int then 
-        a
-    else
-        sum
+    else sum
 
 (* Funkcja make:
     * bierze: dwa poddrzewa l, r i przedział (lo, hi)
@@ -119,6 +116,7 @@ let rec divide t (lo1, hi1) =
     match t with
     | Null -> Null, Null
     | Node(l, (lo, hi), r, h, _) ->  
+            (* odcinki nie przecinają sie *)
             if lo > hi1 then
                 let (less, greater) = divide l (lo1, hi1) in
                 less, join greater (lo, hi) r 
@@ -126,6 +124,7 @@ let rec divide t (lo1, hi1) =
                 let (less, greater) = divide r (lo1, hi1) in
                 join l (lo, hi) less, greater
             else
+                (* odcinki się przecinają *)
                 if lo < lo1 then
                     if hi1 >= hi then
                         let (less, greater) = divide r (lo1, hi1) in
@@ -212,9 +211,7 @@ let remove (lo, hi) t =
  * bierze: drzewo t
  * zwraca: true jeśli drzewo t jest puste, inaczej false*)
 let is_empty t =
-    match t with 
-    | Null -> true
-    | _ -> false
+    t = Null
 
 (* Funkcja iter
  * bierze: funkcje f i t
@@ -268,16 +265,21 @@ let split (x : int) (tr : t) =
 (* Funkcja below
  * bierze: int x drzewo t
  * zwraca: int - ilość elementów drzewa t mniejszych lub równych x *)
-let rec below x t =
-    match t with 
-    | Null -> 0
-    | Node(l, (lo, hi), r, _, _) -> 
-            if x < lo then  
-                below x l
-            else if x > hi then
-                below x r ++ sum l ++ (hi) ++ (-lo) ++ (1)
-            else
-                sum l ++ (x) ++ (-lo) ++ (1) 
+let  below x t =
+    let rec help x t ac = 
+        match t with 
+        | Null -> ac 
+        | Node(l, (lo, hi), r, _, _) -> 
+                if x < lo then  
+                    help x l ac
+                else if x > hi then
+                    help x r (ac ++ sum l ++ (hi) ++ (-lo) ++ (1))
+                else
+                    ac ++ sum l ++ (x) ++ (-lo) ++ (1) 
+    in help x t 0
+
+
+(* TESTY *)
 
 let fillArray k = 
     let rec fill l k = if k = 0 then l
@@ -289,7 +291,6 @@ let rec is_avl k =
     | Null -> true
     | Node(l, _, r, _, _) -> abs(height l - height r) <= 2 && is_avl l && is_avl r
 
-(*
 let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 10000)
 let () = assert (is_avl tr)
 let tr = empty
@@ -306,4 +307,4 @@ let () = assert (below 0 tr = max_int)
 let tr = remove (-max_int + 1, max_int - 1) tr
 let h::t = elements tr
 let () = assert ( h = (-max_int, -max_int) ) 
-let () = assert ( is_avl tr ) *)
+let () = assert ( is_avl tr ) 
