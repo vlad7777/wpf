@@ -32,9 +32,12 @@ let sum = function
  * zwraca: a + b gdy a + b < max_int, inaczej max_int  *)
 let (++) a b = 
     let sum = a + b in
-    if sum < a || sum < b then
+    if b > 0 && (sum < a || sum < b) then
         max_int
-    else sum
+    else if a = max_int then 
+        a
+    else
+        sum
 
 (* Funkcja make:
     * bierze: dwa poddrzewa l, r i przedział (lo, hi)
@@ -43,7 +46,7 @@ let (++) a b =
     * Wynikowe drzewo ma obliczone sumę i wysokość *)
 let make l (lo, hi) r = 
     let nHeight = max (height l) (height r) + 1
-    and nSum = (sum l) ++ (sum r) ++ (hi - lo + 1) in
+    and nSum = (sum l) ++ (sum r) ++ (hi) ++ (-lo) ++ (1) in
     Node (l, (lo, hi), r, nHeight, nSum)
 
 (* Funkca bal:
@@ -88,8 +91,8 @@ let cmp (lo1, hi1) (lo2, hi2) =
 let rec add_sep x = function
   | Node (l, k, r, h, s) ->
       let c = cmp x k in
-      if c = 0 then Node(l, x, r, h, s)
-      else if c < 0 then
+      let () = assert( c != 0 ) in 
+      if c < 0 then
         let nl = add_sep x l in
         bal nl k r
       else
@@ -272,9 +275,9 @@ let rec below x t =
             if x < lo then  
                 below x l
             else if x > hi then
-                below x r + sum l + (hi - lo + 1)
+                below x r ++ sum l ++ (hi) ++ (-lo) ++ (1)
             else
-                sum l + (x - lo + 1) 
+                sum l ++ (x) ++ (-lo) ++ (1) 
 
 (* Debugging stuff *)
 let rec printTree t = 
@@ -287,14 +290,29 @@ let rec printTree t =
         and () = printTree r
         and () = Printf.printf ")" in ()
 
-let fillArray k = 
+let fill k = 
+let rec fill2 l k = 
+if k = 0 then l
+else (fill2 ((k * 2) :: l) (k - 1)) in
+fill2 [] k
+
+let tr = List.fold_left (fun t x -> add (x, x) t) empty (fill 300000)
+(*let fillArray k = 
     let rec fill l k = if k = 0 then l
                 else (fill ((k * 2) :: l) (k - 1)) in
     fill [] k
 
-(* let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 1000000)
+let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 1000000)
 let () = print_int (height tr) 
 let tr = empty
 let tr = add (2, 5) tr
 let a, b = divide tr (3, 5)
-let () = printTree a; printTree b  *)
+let () = printTree a; printTree b 
+
+let fill k = 
+let rec fill2 l k = 
+if k = 0 then l
+else (fill2 ((k * 2) :: l) (k - 1)) in
+fill2 [] k
+
+let tr = List.fold_left (fun t x -> add (x, x) t) empty (fill 3000000) *)
