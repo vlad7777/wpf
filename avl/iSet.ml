@@ -1,6 +1,6 @@
 (* Zadanie Modyfikacja drzew AVL *)
 (* Autor: Uladzislau Sobal 374078 *)
-(* Code-review: Tomasz Gąsior 370797*)
+(* Code-review: Tomasz Gąsior 370797 *)
 
 (* Typ wariantowy drzewo 
  * składa się z:
@@ -31,10 +31,29 @@ let sum = function
  * bierze: dwie liczby
  * zwraca: a + b gdy a + b < max_int, inaczej max_int  *)
 let (++) a b = 
-    let sum = a + b in
-    if sum < b then
+    let rest = max_int - a in
+    if b >= rest then
         max_int
-    else sum
+    else
+        a + b
+
+(* Funkcja get_dist
+ * bierze: granice przedziału
+ * zwraca: długośc przedziału *)
+let rec get_dist lo hi = 
+    let help = 
+        if hi <= 0 then 
+            let res = lo - hi in 
+            if res = min_int then
+                max_int
+            else
+                hi - lo
+        else if lo < 0 then
+            let rest = (max_int - hi)
+            in if -rest > lo then max_int
+            else hi - lo
+        else hi - lo
+    in help ++ 1
 
 (* Funkcja make:
     * bierze: dwa poddrzewa l, r i przedział (lo, hi)
@@ -43,7 +62,7 @@ let (++) a b =
     * Wynikowe drzewo ma obliczone sumę i wysokość *)
 let make l (lo, hi) r = 
     let nHeight = max (height l) (height r) + 1
-    and nSum = (sum l) ++ (sum r) ++ (hi) ++ (-lo) ++ (1) in
+    and nSum = (sum l) ++ (sum r) ++ (get_dist lo hi) in
     Node (l, (lo, hi), r, nHeight, nSum)
 
 (* Funkca bal:
@@ -83,7 +102,8 @@ let cmp (lo1, hi1) (lo2, hi2) =
     else 0
 
 (* Funkcja add_sep
- * bierze: przedział x i drzewo, przy założeniu że x jest rozłączny ze wszystkimi przedziałami drzewa
+ * bierze: przedział x i drzewo, przy założeniu że x jest
+ * rozłączny ze wszystkimi przedziałami drzewa
  * zwraca: drzewo z przypisanym przedziałem x *)
 let rec add_sep x = function
   | Node (l, k, r, _, _) ->
@@ -116,7 +136,7 @@ let rec divide t (lo1, hi1) =
     match t with
     | Null -> Null, Null
     | Node(l, (lo, hi), r, h, _) ->  
-            (* odcinki nie przecinają sie *)
+            (* odcinki się nie przecinają *)
             if lo > hi1 then
                 let (less, greater) = divide l (lo1, hi1) in
                 less, join greater (lo, hi) r 
@@ -265,7 +285,7 @@ let split (x : int) (tr : t) =
 (* Funkcja below
  * bierze: int x drzewo t
  * zwraca: int - ilość elementów drzewa t mniejszych lub równych x *)
-let  below x t =
+let below x t =
     let rec help x t ac = 
         match t with 
         | Null -> ac 
@@ -273,11 +293,10 @@ let  below x t =
                 if x < lo then  
                     help x l ac
                 else if x > hi then
-                    help x r (ac ++ sum l ++ (hi) ++ (-lo) ++ (1))
+                    help x r (ac ++ (sum l) ++ (get_dist lo hi))
                 else
-                    ac ++ sum l ++ (x) ++ (-lo) ++ (1) 
+                    ac ++ (sum l) ++ (get_dist lo x)
     in help x t 0
-
 
 (* TESTY *)
 
@@ -286,12 +305,17 @@ let fillArray k =
                 else (fill ((k * 2) :: l) (k - 1)) in
     fill [] k
 
+(* funkcja sprawdzająca, czy drzewo spełnia warunki AVL drzewa *)
 let rec is_avl k = 
     match k with
     | Null -> true
     | Node(l, _, r, _, _) -> abs(height l - height r) <= 2 && is_avl l && is_avl r
 
-let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 10000)
+(* Stress test *)
+let tr = List.fold_left (fun t x -> add (x, x) t) empty (fillArray 100000)
+let _ = List.iter (fun e -> let v = divide tr (e, e) in ()) (fillArray 100000)
+let () = assert (is_avl tr)
+(*
 let () = assert (is_avl tr)
 let tr = empty
 let tr = add (2, 5) tr
@@ -299,12 +323,44 @@ let () = assert (below 5 tr = 4)
 let () = assert (below 0 tr = 0)
 let tr = add (4, 10) tr
 let () = assert (below 6 tr = 5)
+let () = assert (mem 10 tr)
 let tr = remove (2, 3) tr
 let () = assert (below 6 tr = 3)
 let () = assert (is_avl tr)
 let tr = add (-max_int, max_int) tr
 let () = assert (below 0 tr = max_int)
 let tr = remove (-max_int + 1, max_int - 1) tr
+let () = assert ( is_avl tr )
+let tr = add (10, 100) empty
+let tr = remove (5, 5) tr
+let () = assert (not (mem 5 tr))
+let tr = add (4, 6) tr
+let () = assert ( mem 5 tr )
+
+(* Add *)
+let tr = add (1, 4) empty
+let tr = add (9, 100) tr
+let tr = add (7, 7) tr
+let () = assert (mem 7 tr )
+let () = assert (below 7 tr = 5)
+
+(* Remove *)
+let tr = add (10, 100) empty
+let tr = remove (70, 80) tr 
+let () = assert (not (mem 75 tr ))
+let () = assert (not (mem 70 tr ))
+let () = assert (mem 69 tr)
+
+(* Elements *)
+let tr = add (-max_int, max_int) tr
+let tr = remove (-max_int + 1, max_int - 1) tr
 let h::t = elements tr
-let () = assert ( h = (-max_int, -max_int) ) 
-let () = assert ( is_avl tr ) 
+let () = assert (h = (-max_int, -max_int))
+
+(* Iter *)
+let tr = add (1, 100) empty
+let tr = add (-5, -3) tr
+let tr = add (1000, 1014) tr
+let a = ref 0
+let f (x, y) = a := !a + x; ()
+let () = assert (iter f tr; !a = 996) *)
