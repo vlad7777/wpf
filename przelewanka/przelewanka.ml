@@ -98,6 +98,10 @@ let getAdjacentStates a c =
     done;
     !res;;
 
+(* wyjątki:
+    * found int - rzucamy kiedy uzyskamy potrzebne wartośći
+    * NoSolution - rzucamy kiedy od razu widać, że nie da się otrzymać
+    *               potrzebnych wartośći *)
 exception Found of int;;
 exception NoSolution;;
 
