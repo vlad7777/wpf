@@ -121,6 +121,7 @@ let rec gcd a b =
 let przelewanka a = 
     (* sprawdzamy przypadki brzegowe które nie mogą mieć rozwiązania *)
     try
+        let a = Array.of_list (List.filter (fun (x, y) -> x <> 0) (Array.to_list a)) in
         if Array.length a = 0 then raise (Found 0);
         let g = ref 0 in
         let b = ref false in
